@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Misión Espacial Webster</title>
+<style>
+body{margin:0;font-family:Arial;background:radial-gradient(circle at top,#172554,#020617 68%);color:white;min-height:100vh}
+header{text-align:center;padding:22px}main{max-width:980px;margin:auto;padding:16px}
+.card{background:#0f172acc;border:1px solid #334155;border-radius:16px;padding:20px;margin:14px 0}
+.status{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px}
+.box,.planet{background:#111827;padding:14px;border-radius:12px;border:1px solid #334155;text-align:center}
+.planet-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:14px}
+.planet .icon{font-size:54px}.locked{opacity:.55}.open{box-shadow:0 0 25px #60a5fa55}
+button{padding:11px 15px;border:0;border-radius:10px;margin:5px;cursor:pointer;font-size:15px}
+.go{background:#2563eb;color:white}.back{background:#e2e8f0;color:#111827}.reset{background:#92400e;color:white}.newplayer{background:#b91c1c;color:white}
+.hidden{display:none}.challenge{background:#172033;padding:16px;border-radius:12px;margin-top:14px}
+input{padding:10px;border-radius:8px;border:1px solid #64748b;font-size:17px;width:min(350px,100%)}
+.good{background:#14532d;padding:10px;border-radius:8px}.bad{background:#7f1d1d;padding:10px;border-radius:8px}
+.notice{background:#052e16;border:1px solid #166534;padding:12px;border-radius:10px;margin-top:10px}
+</style>
+</head>
+<body>
+<header><h1>🚀 Misión Espacial Webster</h1><p>Aprende para obtener combustible y desbloquear planetas</p></header>
+<main>
+
+<div class="card status">
+<div class="box">Alumno<br><b id="student">Explorador Webster</b></div>
+<div class="box">⭐ Puntos<br><b id="points">0</b></div>
+<div class="box">⛽ Combustible<br><b id="fuel">0</b>%</div>
+</div>
+
+<div id="notice" class="notice hidden"></div>
+
+<div class="planet-grid" id="planets"></div>
+
+<div class="card hidden" id="mission">
+<h2 id="missionTitle"></h2>
+<p id="missionText"></p>
+<div class="challenge">
+<h3>Reto de navegación</h3>
+<p id="challengeQ"></p>
+<input id="challengeA" placeholder="Respuesta">
+<button class="go" onclick="checkChallenge()">Responder</button>
+<p id="feedback"></p>
+</div>
+</div>
+
+<div class="card">
+<button class="back" onclick="location.href='index.html'">⬅ Volver a Webster Aprende</button>
+<button class="reset" onclick="resetMissions()">🔄 Reiniciar solo misiones</button>
+<button class="newplayer" onclick="newPlayer()">🗑️ Nuevo jugador — comenzar desde 0</button>
+</div>
+
+</main>
+
+<script>
+let points = Number(localStorage.getItem('websterPuntos')) || 0;
+let student = localStorage.getItem('websterUltimoAlumno') || 'Explorador Webster';
+let completed = JSON.parse(localStorage.getItem('websterMisiones') || '[]');
+let active = null;
+
+const missions = [
+{name:'Luna',icon:'🌕',need:30,q:'Calcula 2³ + 4',a:12,text:'Primera escala.'},
+{name:'Marte',icon:'🔴',need:60,q:'Calcula −5 + 12',a:7,text:'Controla operaciones con enteros.'},
+{name:'Júpiter',icon:'🟠',need:100,q:'Calcula 3/4 + 1/4',a:1,text:'Trabaja con fracciones.'},
+{name:'Saturno',icon:'🪐',need:150,q:'Calcula 0.6 × 0.5',a:0.3,text:'Trabaja con decimales.'},
+{name:'Neptuno',icon:'🔵',need:200,q:'Calcula (2³)²',a:64,text:'Domina potencias.'}
+];
+
+function updateStatus(){
+  document.getElementById('student').textContent = student;
+  document.getElementById('points').textContent = points;
+  document.getElementById('fuel').textContent = Math.min(100, Math.round(points/2));
+}
+
+function render(){
+  updateStatus();
+  const c = document.getElementById('planets');
+  c.innerHTML = '';
+
+  missions.forEach((m,i)=>{
+    const open = points >= m.need;
+    const done = completed.includes(i);
+
+    const d = document.createElement('div');
+    d.className = 'planet ' + (open ? 'open' : 'locked');
+
+    d.innerHTML = `
+      <div class="icon">${m.icon}</div>
+      <h2>${m.name}</h2>
+      <p>Requiere <b>${m.need} puntos</b></p>
+      <p>${done ? '✅ Misión completada' : open ? '🔓 Desbloqueado' : '🔒 Bloqueado'}</p>
+    `;
+
+    const b = document.createElement('button');
+    b.className = 'go';
+    b.textContent = done ? 'Repetir misión' : open ? 'Iniciar misión' : 'Necesitas más puntos';
+    b.disabled = !open;
+    b.onclick = () => startMission(i);
+
+    d.appendChild(b);
+    c.appendChild(d);
+  });
+}
+
+render();
+
+function startMission(i){
+  active = i;
+  const m = missions[i];
+
+  document.getElementById('mission').classList.remove('hidden');
+  document.getElementById('missionTitle').textContent = m.icon + ' Misión: ' + m.name;
+  document.getElementById('missionText').textContent = m.text;
+  document.getElementById('challengeQ').textContent = m.q;
+  document.getElementById('challengeA').value = '';
+  document.getElementById('feedback').textContent = '';
+}
+
+function parseVal(v){
+  v = v.trim().replace(',','.');
+
+  if(v.includes('/')){
+    let p = v.split('/');
+    if(p.length === 2 && +p[1] !== 0){
+      return +p[0] / +p[1];
+    }
+  }
+
+  let n = Number(v);
+  return isNaN(n) ? null : n;
+}
+
+function checkChallenge(){
+  if(active === null) return;
+
+  let x = parseVal(document.getElementById('challengeA').value);
+  let f = document.getElementById('feedback');
+
+  if(x === null) return;
+
+  if(Math.abs(x - missions[active].a) < 1e-7){
+    f.className = 'good';
+    f.textContent = '✅ ¡Misión cumplida!';
+
+    if(!completed.includes(active)){
+      completed.push(active);
+      localStorage.setItem('websterMisiones', JSON.stringify(completed));
+    }
+
+    render();
+  } else {
+    f.className = 'bad';
+    f.textContent = '❌ Aún no. Revisa el cálculo.';
+  }
+}
+
+function resetMissions(){
+  if(confirm('¿Deseas reiniciar solamente las misiones? Tus puntos se conservarán.')){
+    completed = [];
+    localStorage.removeItem('websterMisiones');
+    document.getElementById('mission').classList.add('hidden');
+    render();
+  }
+}
+
+function newPlayer(){
+  if(confirm('¿Deseas iniciar un nuevo jugador desde 0 puntos? Se borrarán puntos, nombre y misiones.')){
+
+    // Eliminar completamente los datos guardados
+    localStorage.removeItem('websterPuntos');
+    localStorage.removeItem('websterMisiones');
+    localStorage.removeItem('websterUltimoAlumno');
+
+    // Reiniciar también las variables que ya estaban cargadas en memoria
+    points = 0;
+    completed = [];
+    student = 'Explorador Webster';
+    active = null;
+
+    // Actualizar la pantalla inmediatamente
+    document.getElementById('mission').classList.add('hidden');
+    render();
+
+    const n = document.getElementById('notice');
+    n.classList.remove('hidden');
+    n.innerHTML = '✅ Nuevo jugador creado. Los puntos se reiniciaron a <b>0</b>.';
+
+    // Después volver al programa de aprendizaje para capturar un nuevo nombre
+    setTimeout(() => {
+      location.href = 'index.html?nuevo=1';
+    }, 1200);
+  }
+}
+</script>
+</body>
+</html>
