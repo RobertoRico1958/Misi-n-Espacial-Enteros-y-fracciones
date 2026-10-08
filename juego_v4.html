@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Misión Espacial Webster v4</title>
+<style>
+body{margin:0;font-family:Arial;background:radial-gradient(circle at top,#172554,#020617 68%);color:white;min-height:100vh}
+header{text-align:center;padding:22px}main{max-width:980px;margin:auto;padding:16px}
+.card{background:#0f172acc;border:1px solid #334155;border-radius:16px;padding:20px;margin:14px 0}
+.status{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px}
+.box,.planet{background:#111827;padding:14px;border-radius:12px;border:1px solid #334155;text-align:center}
+.planet-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:14px}
+.planet .icon{font-size:54px}.locked{opacity:.55}.open{box-shadow:0 0 25px #60a5fa55}
+button{padding:11px 15px;border:0;border-radius:10px;margin:5px;cursor:pointer;font-size:15px}
+.go{background:#2563eb;color:white}.back{background:#e2e8f0;color:#111827}
+.reset{background:#92400e;color:white}.newplayer{background:#b91c1c;color:white}
+.version{background:#1e3a8a;padding:7px 10px;border-radius:8px;display:inline-block}
+</style>
+</head>
+<body>
+<header>
+<h1>🚀 Misión Espacial Webster</h1>
+<p>Aprende para obtener combustible y desbloquear planetas</p>
+<div class="version">VERSIÓN 4 · REINICIO TOTAL</div>
+</header>
+<main>
+
+<div class="card status">
+<div class="box">Alumno<br><b id="student">Explorador Webster</b></div>
+<div class="box">⭐ Puntos<br><b id="points">0</b></div>
+<div class="box">⛽ Combustible<br><b id="fuel">0</b>%</div>
+</div>
+
+<div class="planet-grid" id="planets"></div>
+
+<div class="card">
+<button class="back" onclick="location.href='index.html'">⬅ Volver a Webster Aprende</button>
+<button class="reset" onclick="resetMissions()">🔄 Reiniciar solo misiones</button>
+<button class="newplayer" onclick="newPlayer()">🗑️ NUEVO JUGADOR — 0 PUNTOS</button>
+</div>
+
+</main>
+
+<script>
+let points = Number(localStorage.getItem('websterPuntos')) || 0;
+let student = localStorage.getItem('websterUltimoAlumno') || 'Explorador Webster';
+let completed = JSON.parse(localStorage.getItem('websterMisiones') || '[]');
+
+const missions = [
+{name:'Luna',icon:'🌕',need:30},
+{name:'Marte',icon:'🔴',need:60},
+{name:'Júpiter',icon:'🟠',need:100},
+{name:'Saturno',icon:'🪐',need:150},
+{name:'Neptuno',icon:'🔵',need:200}
+];
+
+function updateStatus(){
+  document.getElementById('student').textContent = student;
+  document.getElementById('points').textContent = points;
+  document.getElementById('fuel').textContent = Math.min(100,Math.round(points/2));
+}
+
+function render(){
+  updateStatus();
+  const c=document.getElementById('planets');
+  c.innerHTML='';
+  missions.forEach((m,i)=>{
+    const open=points>=m.need;
+    const done=completed.includes(i);
+    const d=document.createElement('div');
+    d.className='planet '+(open?'open':'locked');
+    d.innerHTML=`<div class="icon">${m.icon}</div><h2>${m.name}</h2>
+    <p>Requiere <b>${m.need} puntos</b></p>
+    <p>${done?'✅ Misión completada':open?'🔓 Desbloqueado':'🔒 Bloqueado'}</p>`;
+    c.appendChild(d);
+  });
+}
+render();
+
+function resetMissions(){
+  if(confirm('¿Reiniciar solamente las misiones y conservar los puntos?')){
+    completed=[];
+    localStorage.removeItem('websterMisiones');
+    render();
+  }
+}
+
+function newPlayer(){
+  if(!confirm('¿Iniciar NUEVO JUGADOR desde 0? Se borrarán puntos, nombre y misiones.')) return;
+
+  // Borrado directo de las tres claves del proyecto
+  localStorage.removeItem('websterPuntos');
+  localStorage.removeItem('websterMisiones');
+  localStorage.removeItem('websterUltimoAlumno');
+
+  // Borrado adicional por seguridad
+  localStorage.setItem('websterPuntos','0');
+  localStorage.setItem('websterMisiones','[]');
+  localStorage.removeItem('websterUltimoAlumno');
+
+  // Estado visual inmediato
+  points=0;
+  completed=[];
+  student='Explorador Webster';
+  render();
+
+  alert('Reinicio confirmado: 0 puntos y 0 misiones completadas.');
+
+  // index.html vuelve a borrar las claves usando ?nuevo=1
+  window.location.replace('index.html?nuevo=1');
+}
+</script>
+</body>
+</html>
